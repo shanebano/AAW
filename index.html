@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Core Dump — COA Flashcards</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     Subject: computer organization & architecture study deck.
+     Direction: a "circuit board / terminal" identity — deep board-
+     green substrate, copper trace accent, phosphor-cyan highlight,
+     monospaced data face for the technical spine of each card.
+     ============================================================ */
+  :root{
+    --board:#0c1f1a;          /* deep PCB green-black */
+    --board-2:#102a23;        /* raised panel */
+    --panel:#14332b;          /* card face */
+    --panel-hi:#1b4136;       /* hover / raised */
+    --copper:#c8853a;         /* trace / accent */
+    --copper-hi:#e0a85c;
+    --phosphor:#5fd6b4;       /* highlight cyan-green */
+    --phosphor-dim:#3a9d82;
+    --ink:#e8f2ee;            /* primary text */
+    --ink-dim:#9db8ae;        /* secondary text */
+    --line:#22463b;           /* hairline */
+    --danger:#d76b5a;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(95,214,180,.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(200,133,58,.06), transparent 60%),
+      var(--board);
+    color:var(--ink);
+    font-family:"Georgia","Iowan Old Style",serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace}
+
+  /* ---------------- layout shell ---------------- */
+  header.top{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg, rgba(12,31,26,.96), rgba(12,31,26,.82));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .top-inner{
+    max-width:1080px;margin:0 auto;padding:14px 20px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+  .brand .logo{
+    font-family:"SF Mono",ui-monospace,monospace;font-weight:700;
+    font-size:20px;letter-spacing:.5px;color:var(--ink);
+  }
+  .brand .logo b{color:var(--phosphor)}
+  .brand .tag{font-size:12px;color:var(--ink-dim);font-style:italic}
+  .counter{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:12px;
+    color:var(--copper-hi);border:1px solid var(--line);
+    padding:5px 10px;border-radius:20px;white-space:nowrap;
+  }
+
+  main{max-width:1080px;margin:0 auto;padding:22px 20px 80px}
+
+  /* ---------------- deck rail ---------------- */
+  .decks{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .deck-btn{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:12.5px;
+    color:var(--ink-dim);background:var(--board-2);
+    border:1px solid var(--line);border-radius:999px;
+    padding:8px 14px;cursor:pointer;transition:.15s;
+    display:flex;align-items:center;gap:7px;
+  }
+  .deck-btn:hover{color:var(--ink);border-color:var(--phosphor-dim)}
+  .deck-btn.active{
+    color:var(--board);background:var(--phosphor);
+    border-color:var(--phosphor);font-weight:600;
+  }
+  .deck-btn .n{
+    font-size:11px;opacity:.8;
+    background:rgba(0,0,0,.18);border-radius:10px;padding:1px 7px;
+  }
+  .deck-btn.active .n{background:rgba(0,0,0,.16)}
+
+  /* ---------------- controls ---------------- */
+  .controls{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    margin:16px 0 20px;
+  }
+  .search{
+    flex:1;min-width:200px;display:flex;align-items:center;gap:8px;
+    background:var(--board-2);border:1px solid var(--line);
+    border-radius:10px;padding:9px 12px;
+  }
+  .search input{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--ink);font-family:inherit;font-size:14px;
+  }
+  .search input::placeholder{color:var(--ink-dim)}
+  .search svg{width:15px;height:15px;stroke:var(--ink-dim);fill:none;stroke-width:2}
+  .btn{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:13px;
+    border-radius:10px;padding:9px 15px;cursor:pointer;
+    border:1px solid var(--line);background:var(--board-2);color:var(--ink);
+    transition:.15s;white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--phosphor-dim);color:var(--phosphor)}
+  .btn.primary{
+    background:var(--copper);border-color:var(--copper);color:#241206;font-weight:600;
+  }
+  .btn.primary:hover{background:var(--copper-hi);border-color:var(--copper-hi);color:#241206}
+  .btn.ghost:hover{color:var(--copper-hi);border-color:var(--copper)}
+
+  /* ---------------- mode toggle ---------------- */
+  .modebar{display:flex;gap:2px;background:var(--board-2);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .modebar button{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:12.5px;
+    background:transparent;border:none;color:var(--ink-dim);
+    padding:7px 13px;border-radius:8px;cursor:pointer;transition:.15s;
+  }
+  .modebar button.on{background:var(--panel-hi);color:var(--ink)}
+
+  /* ============================================================
+     BROWSE GRID
+     ============================================================ */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+  .card{
+    position:relative;height:220px;perspective:1400px;cursor:pointer;
+    background:transparent;
+  }
+  .card-inner{
+    position:absolute;inset:0;transition:transform .5s cubic-bezier(.2,.7,.2,1);
+    transform-style:preserve-3d;
+  }
+  .card.flipped .card-inner{transform:rotateY(180deg)}
+  .face{
+    position:absolute;inset:0;backface-visibility:hidden;
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;display:flex;flex-direction:column;
+    box-shadow:var(--shadow);overflow:hidden;
+  }
+  .face.front{
+    background:
+      linear-gradient(180deg,var(--panel),var(--board-2));
+  }
+  .face.back{
+    background:linear-gradient(180deg,var(--panel-hi),var(--panel));
+    transform:rotateY(180deg);
+  }
+  /* copper corner trace motif */
+  .face.front::before{
+    content:"";position:absolute;top:0;left:0;width:46px;height:46px;
+    border-top:2px solid var(--copper);border-left:2px solid var(--copper);
+    border-top-left-radius:var(--radius);opacity:.55;
+  }
+  .face.back::after{
+    content:"";position:absolute;bottom:0;right:0;width:46px;height:46px;
+    border-bottom:2px solid var(--phosphor-dim);border-right:2px solid var(--phosphor-dim);
+    border-bottom-right-radius:var(--radius);opacity:.5;
+  }
+  .card-eyebrow{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:10.5px;
+    letter-spacing:1px;text-transform:uppercase;color:var(--copper-hi);
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;
+  }
+  .card-eyebrow .side{color:var(--ink-dim)}
+  .card-q{font-size:17px;line-height:1.35;color:var(--ink);overflow:auto}
+  .card-a{font-size:14px;line-height:1.45;color:var(--ink);overflow:auto}
+  .card-a .mono{color:var(--phosphor);font-size:13px}
+  .face .hint{
+    margin-top:auto;font-family:"SF Mono",ui-monospace,monospace;
+    font-size:10.5px;color:var(--ink-dim);padding-top:8px;
+  }
+  .card .del{
+    position:absolute;top:10px;right:10px;z-index:3;
+    width:24px;height:24px;border-radius:6px;border:1px solid var(--line);
+    background:rgba(0,0,0,.25);color:var(--ink-dim);cursor:pointer;
+    font-size:14px;line-height:1;display:none;align-items:center;justify-content:center;
+  }
+  .card:hover .del{display:flex}
+  .card .del:hover{color:var(--danger);border-color:var(--danger)}
+  .card.custom .card-eyebrow::after{
+    content:"MINE";font-size:9px;color:var(--phosphor);
+    border:1px solid var(--phosphor-dim);border-radius:8px;padding:0 5px;margin-left:6px;
+  }
+
+  /* ============================================================
+     STUDY MODE
+     ============================================================ */
+  .study{display:none;flex-direction:column;align-items:center;gap:18px}
+  .study.on{display:flex}
+  .study-progress{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:12px;color:var(--ink-dim);
+    display:flex;align-items:center;gap:14px;
+  }
+  .pbar{width:200px;height:4px;background:var(--line);border-radius:3px;overflow:hidden}
+  .pbar span{display:block;height:100%;background:var(--phosphor);width:0;transition:width .3s}
+  .study-card{
+    width:min(620px,92vw);height:340px;perspective:1600px;cursor:pointer;
+  }
+  .study-card .card-inner{position:absolute;inset:0}
+  .study-card .face{padding:30px}
+  .study-card .card-q{font-size:23px;line-height:1.4}
+  .study-card .card-a{font-size:17px;line-height:1.5}
+  .study-nav{display:flex;gap:10px;align-items:center}
+  .study-empty{color:var(--ink-dim);text-align:center;padding:60px 20px;font-style:italic}
+
+  /* ---------------- empty browse ---------------- */
+  .empty{
+    grid-column:1/-1;text-align:center;padding:70px 20px;color:var(--ink-dim);
+    border:1px dashed var(--line);border-radius:var(--radius);font-style:italic;
+  }
+
+  /* ============================================================
+     MODAL (add / import)
+     ============================================================ */
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(4,12,9,.72);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .modal-bg.on{display:flex}
+  .modal{
+    background:var(--board-2);border:1px solid var(--line);border-radius:16px;
+    width:min(560px,96vw);max-height:90vh;overflow:auto;box-shadow:var(--shadow);
+  }
+  .modal h2{
+    font-family:"SF Mono",ui-monospace,monospace;font-size:15px;letter-spacing:.5px;
+    padding:18px 22px;border-bottom:1px solid var(--line);color:var(--ink);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .modal .x{cursor:pointer;color:var(--ink-dim);font-size:20px;background:none;border:none}
+  .modal .body{padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+  .field label{
+    display:block;font-family:"SF Mono",ui-monospace,monospace;font-size:11px;
+    letter-spacing:.5px;text-transform:uppercase;color:var(--copper-hi);margin-bottom:6px;
+  }
+  .field input,.field textarea,.field select{
+    width:100%;background:var(--board);border:1px solid var(--line);border-radius:9px;
+    color:var(--ink);font-family:inherit;font-size:14px;padding:10px 12px;outline:none;resize:vertical;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--phosphor-dim)}
+  .field textarea{min-height:80px}
+  .modal .actions{display:flex;gap:10px;justify-content:flex-end;padding:6px 22px 22px}
+  .note{font-size:12px;color:var(--ink-dim);line-height:1.5}
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--panel-hi);border:1px solid var(--phosphor-dim);color:var(--ink);
+    font-family:"SF Mono",ui-monospace,monospace;font-size:13px;
+    padding:11px 18px;border-radius:10px;opacity:0;transition:.3s;pointer-events:none;z-index:60;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  footer{max-width:1080px;margin:0 auto;padding:0 20px 40px;color:var(--ink-dim);font-size:12px}
+  footer .mono{color:var(--phosphor-dim)}
+
+  @media (max-width:560px){
+    .brand .tag{display:none}
+    .controls{flex-direction:column;align-items:stretch}
+    .modebar{justify-content:center}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .card-inner{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <span class="logo">core<b>dump</b>()</span>
+      <span class="tag">flashcards for computer organization &amp; architecture</span>
+    </div>
+    <span class="counter" id="counter">0 cards</span>
+  </div>
+</header>
+
+<main>
+  <div class="decks" id="decks"></div>
+
+  <div class="controls">
+    <div class="search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" placeholder="Search questions and answers…" />
+    </div>
+    <div class="modebar">
+      <button id="mBrowse" class="on" onclick="setMode('browse')">Browse</button>
+      <button id="mStudy" onclick="setMode('study')">Study</button>
+    </div>
+    <button class="btn ghost" onclick="shuffleStudy()">Shuffle</button>
+    <button class="btn primary" onclick="openAdd()">+ Add card</button>
+  </div>
+
+  <!-- BROWSE -->
+  <section id="browseView">
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- STUDY -->
+  <section id="studyView" class="study">
+    <div class="study-progress">
+      <span id="studyCount">0 / 0</span>
+      <div class="pbar"><span id="pbar"></span></div>
+      <span id="studyDeck"></span>
+    </div>
+    <div class="study-card card" id="studyCard" onclick="flipStudy()">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="card-eyebrow"><span id="sDeck">—</span><span class="side">question</span></div>
+          <div class="card-q" id="sQ"></div>
+          <div class="hint">click to reveal · space</div>
+        </div>
+        <div class="face back">
+          <div class="card-eyebrow"><span>answer</span><span class="side" id="sDeck2">—</span></div>
+          <div class="card-a" id="sA"></div>
+          <div class="hint">← prev · next → · click to flip</div>
+        </div>
+      </div>
+    </div>
+    <div class="study-nav">
+      <button class="btn" onclick="prevStudy()">← Prev</button>
+      <button class="btn" onclick="flipStudy()">Flip</button>
+      <button class="btn primary" onclick="nextStudy()">Next →</button>
+    </div>
+    <div class="study-empty" id="studyEmpty" style="display:none">No cards in this deck yet. Add one, or pick another deck.</div>
+  </section>
+</main>
+
+<footer>
+  <span class="mono">// </span> Built from Chapters 1–3, number systems, and the textbook review questions.
+  Your added cards are saved on this device. <span class="mono" id="customCount"></span>
+</footer>
+
+<!-- ADD MODAL -->
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h2>Add a card <button class="x" onclick="closeAdd()">×</button></h2>
+    <div class="body">
+      <div class="field">
+        <label>Deck</label>
+        <select id="addDeck"></select>
+      </div>
+      <div class="field">
+        <label>Question / front</label>
+        <textarea id="addQ" placeholder="e.g. What does DMA stand for and why is it useful?"></textarea>
+      </div>
+      <div class="field">
+        <label>Answer / back</label>
+        <textarea id="addA" placeholder="Direct Memory Access — lets an I/O module transfer data to/from memory without tying up the CPU."></textarea>
+      </div>
+      <p class="note">Tip: wrap technical strings in <code>`backticks`</code> to render them in monospace on the answer side — e.g. <code>`1101 0011 = 0xD3`</code>.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="closeAdd()">Cancel</button>
+      <button class="btn primary" onclick="saveCard()">Save card</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================================================================
+   DECK DEFINITIONS
+   ================================================================ */
+const DECKS = [
+  {id:"ch1",   name:"Ch 1 · Basics & Evolution"},
+  {id:"ch2",   name:"Ch 2 · Performance"},
+  {id:"ch3",   name:"Ch 3 · Function & Interconnect"},
+  {id:"num",   name:"Number Systems"},
+  {id:"review",name:"Review Q&A"},
+];
+const DECK_NAME = Object.fromEntries(DECKS.map(d=>[d.id,d.name]));
+
+/* ================================================================
+   SEED CARDS  (built from everything shared so far)
+   q = front, a = back.  Backticks -> monospace span.
+   ================================================================ */
+const SEED = [
+  // ---------- CH 1 ----------
+  ["ch1","Architecture vs. organization?","Architecture = attributes visible to the programmer that affect program execution (instruction set, data types, addressing, I/O mechanisms). Organization = how those features are implemented in hardware (control signals, interfaces, memory tech), hidden from the programmer."],
+  ["ch1","Is an ISA architecture or organization?","Architecture — the instruction set is the programmer-visible interface, which is exactly what 'architecture' means."],
+  ["ch1","What is backward compatibility?","New hardware/software still runs older software (or works with older hardware). It protects the customer's software investment — the point of the IBM 360/370 family."],
+  ["ch1","The four main structural components of a computer?","CPU, Main memory, I/O, and System interconnection (e.g. the system bus)."],
+  ["ch1","CPU vs. core?","A core is one processing unit on a chip (ALU + control unit + registers + cache). A CPU is the part that fetches and executes instructions; on a single-unit system 'CPU' and 'processor' are used interchangeably. A processor chip can hold many cores."],
+  ["ch1","Three functional elements of a CPU core?","1) Instruction logic (fetch + decode), 2) ALU (performs the operation), 3) Load/store logic (moves data to/from memory via cache)."],
+  ["ch1","Main structural components of a core?","Control unit, ALU, registers, and CPU interconnection."],
+  ["ch1","Main components of the IAS structure?","Main memory (data + instructions), ALU, Control unit, and I/O equipment."],
+  ["ch1","What is cache memory?","Smaller, faster memory between the CPU and main memory holding data likely to be used soon. Levels: L1 (closest/fastest) → L2 → L3. Level n is smaller & faster than n+1."],
+  ["ch1","What is a stored-program computer?","A computer where instructions AND data live in the same read-write memory, so it can be reprogrammed by loading new instructions instead of rewiring. Attributed to von Neumann (EDVAC 1945, realized in the IAS)."],
+  ["ch1","The three von Neumann concepts?","1) Data & instructions share one read-write memory; 2) memory is addressable by location regardless of content type; 3) execution is sequential unless explicitly changed."],
+  ["ch1","IAS registers (name them)?","MBR, MAR, IR, IBR, PC, AC, MQ."],
+  ["ch1","Generation 1 technology & landmark?","Vacuum tubes. Landmark: the IAS computer (stored-program concept, completed 1952)."],
+  ["ch1","Generation 2 technology?","Transistors — smaller, cheaper, less heat; solid-state silicon; invented at Bell Labs (1947). Brought high-level languages and system software."],
+  ["ch1","Generation 3 technology & landmark?","Integrated circuits (1958). Landmark: IBM System/360 (1964), the first planned family of compatible computers."],
+  ["ch1","State Moore's Law and its consequences.","The number of transistors per chip doubles at a regular interval (~every 18–24 months), while cost roughly halves. Consequences: lower cost, higher speed, smaller size, less power/cooling, and greater reliability."],
+  ["ch1","Intel 4004 (1971) — why notable?","First chip to contain all components of a CPU on a single chip — the first microprocessor."],
+  ["ch1","Intel 8008 (1972) vs 8080 (1974)?","8008 = first 8-bit microprocessor. 8080 = first general-purpose microprocessor (faster, richer instruction set, larger addressing)."],
+  ["ch1","x86 vs. ARM design philosophy?","x86 = CISC (complex instruction set), backward-compatible over decades. ARM = RISC (reduced instruction set); ARM licenses its IP (franchise model) rather than making its own chips."],
+  ["ch1","Embedded vs. general-purpose computer?","Embedded = electronics + software inside a larger product, often with real-time/reactive constraints, optimized for cost/power/size. General-purpose = runs arbitrary software with a full OS (laptop, server)."],
+  ["ch1","Microcontroller vs. microprocessor?","A microcontroller is a 'computer on a chip' — CPU + ROM + RAM + clock + I/O on one chip, no cache, lower power. A microprocessor is just the processor and needs supporting chips."],
+  ["ch1","What is a deeply embedded system?","A subset of embedded systems: uses a microcontroller, is ROM-fixed (not reprogrammable after burn-in), has no user interaction, and has extreme constraints on memory, size, time, and power. Foundation of IoT."],
+  ["ch1","ARM Holdings' business model?","It designs processor and architecture IP and licenses it to manufacturers — it does not fabricate its own chips."],
+  ["ch1","The three ARM Cortex families?","Cortex-A = application processors (smartphones, rich OS, MMU). Cortex-R = real-time / safety-critical (MPU, low latency). Cortex-M = microcontroller domain (lowest power/cost)."],
+  ["ch1","Four versions of the Cortex-M series?","M0 (8/16-bit, ultra-low cost & power), M0+ (more energy-efficient M0), M3 (16/32-bit, performance + debug/trace), M4 (M3 plus DSP instructions)."],
+  ["ch1","Explain the Internet of Things (IoT).","The expanding interconnection of smart devices (appliances to tiny sensors) communicating with each other and larger systems, mostly via cloud. Driven by deeply embedded devices. 4 Internet generations: IT, OT, personal, sensor/actuator — the 4th is 'the IoT'."],
+  ["ch1","Three cloud service models?","SaaS (software as a service — apps in the cloud), PaaS (platform for building/running apps), IaaS (infrastructure — VMs and fundamental compute resources)."],
+  ["ch1","Advantages of a family-based architecture?","Same/similar instruction set & OS across models; moving up the family increases speed, I/O ports, memory, and cost. Customers upgrade without rewriting software; vendors sell a whole performance range."],
+
+  // ---------- CH 2 ----------
+  ["ch2","Pipelining?","Overlapping instruction stages like an assembly line — while one instruction executes, the next is decoded, etc."],
+  ["ch2","Branch prediction?","The processor guesses whether a branch is taken and prefetches those instructions, keeping the pipeline full."],
+  ["ch2","Superscalar execution?","Issuing more than one instruction per clock cycle using multiple parallel pipelines."],
+  ["ch2","Data flow analysis?","Scheduling instructions by their data dependencies rather than strict program order, to avoid unnecessary delay."],
+  ["ch2","Speculative execution?","Using branch prediction + data flow analysis to execute likely-needed instructions ahead of time, holding results in temporary locations."],
+  ["ch2","What is performance balance?","Adjusting organization/architecture so component capabilities don't mismatch. Overall performance is a composite of CPU, memory, and I/O speeds."],
+  ["ch2","The most critical bottleneck pathway?","The processor ↔ main memory interface — memory speed lags processor speed."],
+  ["ch2","Wide vs. deep memory?","Wide memory returns more bytes per read cycle (limited by data-bus width); deep memory returns fewer bytes per cycle. Wider = more chip real estate (a trade-off)."],
+  ["ch2","Three ways to increase processor speed?","1) Faster hardware (smaller gates, higher clock, shorter signal propagation); 2) bigger/faster caches; 3) better organization/architecture (parallelism)."],
+  ["ch2","Obstacles as clock speed & logic density rise?","Power density & heat dissipation (end of pure clock scaling), RC delay, and memory latency."],
+  ["ch2","What causes RC delay in chip interconnects?","The resistance and capacitance of the wires. As parts shrink, wires get thinner (↑resistance) and closer (↑capacitance); delay increases as the RC product increases."],
+  ["ch2","Why did the industry move to multicore?","Clock speed leveled off to limit power/heat, but transistor counts kept rising (Moore's Law). Multicore uses those transistors for parallelism instead of a single more-complex, hotter core."],
+  ["ch2","MIC (Many Integrated Core)?","A homogeneous collection of general-purpose cores on a single chip (50+ cores)."],
+  ["ch2","GPU and GPGPU?","GPU = a core designed for parallel operations on graphics data, reusable as a vector processor. GPGPU = general-purpose computing on GPUs."],
+  ["ch2","State Amdahl's Law.","Speedup S = `1 / [ (1 − f) + f/N ]`, where f = parallelizable fraction and N = number of processors. As N→∞, S → `1/(1 − f)`. Speedup is limited by the serial part."],
+  ["ch2","Amdahl's Law — key conclusions?","If f is small, adding processors barely helps; as N→∞ speedup is bounded by 1/(1−f) → diminishing returns. Software must be adapted to parallel execution to benefit."],
+  ["ch2","State Little's Law.","(avg number of items in a system) = (arrival rate) × (avg time an item spends in the system). Requires very few assumptions; applies to any steady-state system with no leakage."],
+  ["ch2","What generates the system clock?","A quartz crystal — it produces a stable frequency across temperature and humidity, converted to a digital pulse stream. Clock rate is in Hz."],
+  ["ch2","MIPS vs. MFLOPS?","MIPS = millions of instructions per second. MFLOPS = millions of floating-point operations per second. Clock speed alone doesn't tell the whole performance story."],
+  ["ch2","Which mean for execution times?","Arithmetic Mean (AM) — it's directly proportional to total time (double the time, double the mean)."],
+  ["ch2","Which mean for rates (e.g. MFLOPS)?","Harmonic Mean (HM)."],
+  ["ch2","Which mean for normalized values, and who uses it?","Geometric Mean (GM). SPEC uses it — it's consistent regardless of which system is the reference and is less biased by outliers."],
+  ["ch2","Desirable benchmark characteristics?","Written in a high-level language (portable), representative of a programming domain, easily measured, and widely distributed."],
+  ["ch2","What is SPEC CPU2006?","The processor-intensive benchmark suite: 17 floating-point + 12 integer programs (3M+ lines). A reference machine sets the baseline; metrics include base/peak and speed/rate."],
+  ["ch2","SPEC speed vs. rate metric?","Speed metric = time to run a single task. Rate metric = how many tasks complete in a period, running simultaneously on multiple processors (throughput)."],
+  ["ch2","How is the SPEC speed metric computed (12 integer benchmarks)?","The geometric mean — the 12th root of the product of the 12 benchmark ratios (each ratio = reference time / measured time)."],
+
+  // ---------- CH 3 ----------
+  ["ch3","What is a hardwired program?","Connecting hardware components in a fixed configuration for a specific task — as opposed to software, a sequence of coded instructions the hardware interprets."],
+  ["ch3","Program Counter (PC)?","Holds the address of the next instruction to fetch; the processor increments it after each fetch."],
+  ["ch3","Instruction Register (IR)?","Holds the fetched instruction while the control unit interprets its opcode bits."],
+  ["ch3","MAR vs. MBR?","MAR (Memory Address Register) specifies the memory address for the next read/write. MBR (Memory Buffer Register) holds the data written to / read from memory."],
+  ["ch3","Can the Program Counter connect directly to memory?","No — the address in the PC goes out through the MAR onto the address bus. The PC doesn't drive memory directly."],
+  ["ch3","The two basic steps of the instruction cycle?","Fetch and Execute — repeated until the machine halts, an unrecoverable error occurs, or a halt instruction runs."],
+  ["ch3","Describe the fetch cycle.","PC holds the next instruction's address; that address goes out (via MAR), the word returns (via MBR) into the IR, and the PC is incremented to point to the next instruction."],
+  ["ch3","Describe the execute cycle.","The control unit decodes the IR's opcode and generates control signals: move data between AC and memory, perform an ALU operation, or change the PC (branch). Operand references go out via MAR/MBR."],
+  ["ch3","4-bit opcode → how many opcodes? 12 address bits → how many words?","`2^4 = 16` opcodes; `2^12 = 4096` (4K) directly addressable words."],
+  ["ch3","Why are interrupts provided?","To improve efficiency — the CPU can keep working while slow I/O proceeds, instead of busy-waiting (polling) for the device."],
+  ["ch3","The four classes of interrupts?","Program (overflow, divide-by-0, illegal instruction, bad memory ref), Timer, I/O, and Hardware failure."],
+  ["ch3","What happens in the interrupt cycle?","The CPU saves its context (PC + relevant data), sets the PC to the interrupt handler's start address, services the interrupt, then restores context and resumes the user program."],
+  ["ch3","Sequential vs. nested interrupt processing?","Sequential = disable interrupts while handling one (strict order). Nested = assign priorities so a higher-priority interrupt can preempt a running lower-priority handler."],
+  ["ch3","What is DMA?","Direct Memory Access — the processor grants an I/O module authority to read/write memory directly, so the I/O–memory transfer happens without tying up the CPU."],
+  ["ch3","What is a bus?","A shared transmission medium connecting multiple devices; only one device can transmit at a time (else signals garble). A system bus connects processor, memory, and I/O."],
+  ["ch3","The three functional groups of bus lines?","Data lines, Address lines, and Control lines (plus power distribution)."],
+  ["ch3","What does data-bus width determine?","How many bits transfer at once — a key factor in overall system performance. (If the bus is 32 bits and an instruction is 64 bits, two accesses are needed per fetch.)"],
+  ["ch3","What does address-bus width determine?","The maximum possible memory capacity: `2^A` locations for an A-bit address bus. Higher-order bits select the module; lower-order bits select a location/port within it."],
+  ["ch3","Why move from shared buses to point-to-point?","At high frequency, synchronization and arbitration on wide shared buses become hard; multicore made it worse. Point-to-point gives lower latency, higher data rate, and better scalability."],
+  ["ch3","What is QPI (2008)?","Intel QuickPath Interconnect — a point-to-point scheme with multiple direct connections (no arbitration), a layered protocol architecture, and packetized data transfer."],
+  ["ch3","QPI layers and their units?","Physical (20-bit `phit`), Link (80-bit `flit` — flow control + CRC error control), Routing (paths through the fabric), Protocol (packet; cache coherence)."],
+  ["ch3","QPI error control?","Each 80-bit flit carries a 72-bit payload + an 8-bit CRC (cyclic redundancy check). Mismatched CRC → request retransmission of that flit and all subsequent ones."],
+  ["ch3","What is PCIe?","PCI Express — a point-to-point interconnect that replaces the bus-based PCI, built for high-data-rate I/O (e.g. Gigabit Ethernet) and time-dependent streams."],
+  ["ch3","How does a PCIe lane transfer data?","Differential signaling over a pair of wires. A port can bundle 1, 4, 8, 16, or 32 lanes, distributing data round-robin (multilane distribution); PCIe 3.0 uses 128b/130b encoding."],
+  ["ch3","The three PCIe protocol layers?","Physical, Data Link (produces DLLPs, reliable delivery), and Transaction (produces TLPs for load/store transfers)."],
+  ["ch3","What is the PCIe root complex?","The chipset/host bridge connecting the processor and memory subsystem to the PCIe switch fabric; it buffers between data rates and translates between PCIe and processor/memory formats."],
+  ["ch3","What is a PCIe split transaction?","A source sends a request packet, then later receives a separate completion packet (each tagged with a unique ID). The link is free for other traffic in between — unlike a bus that's seized for the whole exchange."],
+
+  // ---------- NUMBER SYSTEMS ----------
+  ["num","n-bit unsigned range?","`0` to `2^n − 1`."],
+  ["num","n-bit 2's complement range?","`−2^(n−1)` to `+2^(n−1) − 1`. The MSB is the sign bit (0 = +, 1 = −)."],
+  ["num","8-bit 2's complement max & min?","max = `+127 = 0x7F`; min = `−128 = 0x80`. Unsigned max = `255 = 0xFF`."],
+  ["num","16-bit 2's complement max & min?","max = `+32767 = 0x7FFF`; min = `−32768 = 0x8000`. Unsigned max = `65535 = 0xFFFF`."],
+  ["num","How do you negate a number in 2's complement?","Invert all bits, then add 1. (Same procedure both directions.)"],
+  ["num","How do you read a negative 2's-complement pattern?","If MSB = 1: invert all bits, add 1, read that as a positive value, then attach a minus sign."],
+  ["num","Write −45 in 8-bit 2's complement.","45 = `0010 1101` → invert `1101 0010` → +1 = `1101 0011` = `0xD3`."],
+  ["num","Value of the 8-bit signed pattern 1011 0110?","MSB=1 → negative. Invert = `0100 1001`, +1 = `0100 1010` = 74 → `−74`."],
+  ["num","Value of the 16-bit signed pattern 0xC7E9?","= `1100 0111 1110 1001`; invert+1 → `0x3817` = 14359 → `−14359`."],
+  ["num","Decimal → binary method?","Repeatedly divide by 2 and record remainders bottom-up (or subtract powers of 2). e.g. 156 = `1001 1100` = 128+16+8+4."],
+  ["num","Binary → hex method?","Group bits in 4s from the right; convert each nibble. e.g. `1100 0111` = `0xC7`."],
+  ["num","Binary → octal method?","Group bits in 3s from the right; each group is 0–7. e.g. `1 1011 1001` → `671` (octal)."],
+  ["num","Octal → decimal method?","Weight each digit by powers of 8. e.g. `671₈` = 6·64 + 7·8 + 1 = `441`."],
+  ["num","Convert decimal 761 to binary & hex.","`0000 0010 1111 1001` = `0x02F9`."],
+  ["num","Packed vs. unpacked BCD?","Packed: each decimal digit → 4 bits, two digits per byte (57 → `0x57`). Unpacked: each digit in its own byte, high nibble 0 (57 → `0x0507`)."],
+  ["num","BCD & ASCII for the number 023?","Packed BCD = `0x0023`; unpacked BCD = `0x000203`; ASCII = `0x30 0x32 0x33` ('0','2','3')."],
+  ["num","ASCII of a digit — the rule?","Add `0x30` to the digit. '0' = `0x30`, '5' = `0x35`, '9' = `0x39`. Convert each digit separately."],
+  ["num","Add 8-bit 2's-comp 0010 1101 + 1101 0011.","(+45) + (−45) = `1 0000 0000` → drop the carry → `0000 0000` = 0."],
+
+  // ---------- REVIEW Q&A (from the textbook pages) ----------
+  ["review","IAS machine code: store AC to memory address 8?","STOR M(X), opcode `0x21` (00100001), address 8 = `0x008` → instruction ≈ `0x21008`."],
+  ["review","IAS machine code: add memory address 16 to AC?","ADD M(X), opcode `0x05` (00000101), address 16 = `0x010` → instruction ≈ `0x05010`."],
+  ["review","IBM 360 Model 75 is 50× the Model 30's performance, but cycle time only 5× faster — why?","Organization, not just clock: the Model 75 fetches 8 bytes/access vs the Model 30's 1 byte, and uses more parallel ALU circuitry. Bus width + parallelism multiply with cycle time to give ~50× throughput."],
+  ["review","Billy Bob: is a 1.8 GHz Pentium 4 faster than a 1.2 GHz Core 2 Duo?","No — clock speed alone can't compare different architectures. The Core 2 Duo has 2 cores, higher IPC, better pipelining and caches, so it usually wins despite the lower GHz. Use benchmarks, not MHz."],
+  ["review","Why can the two-instructions-per-word IAS format be inefficient?","On branches/jumps that target the right-hand instruction of a word, the whole word was still fetched — the unused left instruction wastes the fetch. Non-sequential flow loses the packing advantage."],
+  ["review","Benefits of two instructions per IAS word?","One memory fetch retrieves two instructions → fewer (≈half) fetch accesses, more compact program storage, and it supports buffering the second instruction in the IBR."],
+  ["review","Classify: university mainframe server / smart TV / smart-fridge sensor.","Mainframe server = general-purpose; smart TV = embedded (app-processor style); smart-fridge sensor = deeply embedded (fixed, no UI, tight constraints)."],
+  ["review","Classify: personal laptop / hearing aid / GPS nav unit.","Laptop = general-purpose; hearing aid = deeply embedded (tiny, fixed-function, extreme power/size limits); GPS unit = embedded (dedicated but has a UI and app-level processing)."],
+  ["review","Which devices suit an ARM Cortex-R (real-time/safety-critical)?","Yes: self-driving car, aircraft environmental control, blood gas analyzer, telephone switchboard, ECG machine. No/overkill: programmable keyboard & key finder (use Cortex-M), monitor & game console (use Cortex-A)."],
+];
+
+/* ================================================================
+   STORAGE
+   Resilient + synchronous. Never blocks card rendering.
+   Order of preference for persisting YOUR added cards:
+     1) localStorage        (works for a downloaded file on phone/desktop)
+     2) window.storage      (the Claude runtime, async best-effort)
+     3) in-memory           (cards last for the session only)
+   The 108 built-in cards ALWAYS load regardless of storage.
+   ================================================================ */
+const CUSTOM_KEY = "coa_custom_cards_v1";
+const HIDDEN_KEY = "coa_hidden_seeds_v1";
+let customCards = [];      // {id, deck, q, a}
+let hiddenSeeds = [];      // ids of built-in cards the user removed
+let persistMode = "memory";
+
+function hasLocalStorage(){
+  try{
+    const k="__coa_test__";
+    window.localStorage.setItem(k,"1");
+    window.localStorage.removeItem(k);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* Load synchronously from localStorage so cards render instantly. */
+function loadCustomSync(){
+  if(hasLocalStorage()){
+    persistMode = "local";
+    try{ customCards = JSON.parse(window.localStorage.getItem(CUSTOM_KEY)) || []; }catch(e){ customCards=[]; }
+    try{ hiddenSeeds = JSON.parse(window.localStorage.getItem(HIDDEN_KEY)) || []; }catch(e){ hiddenSeeds=[]; }
+  }
+}
+
+/* If the Claude runtime storage exists, adopt any cards saved there too
+   (best-effort, async, runs after the UI is already showing). */
+async function adoptRuntimeStorage(){
+  if(typeof window.storage === "undefined" || !window.storage) return;
+  try{
+    const r = await window.storage.get(CUSTOM_KEY);
+    const runtimeCards = r && r.value ? JSON.parse(r.value) : [];
+    const h = await window.storage.get(HIDDEN_KEY);
+    const runtimeHidden = h && h.value ? JSON.parse(h.value) : [];
+    // merge by id, runtime wins on conflicts
+    const seen = new Set(customCards.map(c=>c.id));
+    let changed=false;
+    runtimeCards.forEach(c=>{ if(!seen.has(c.id)){ customCards.push(c); changed=true; } });
+    runtimeHidden.forEach(id=>{ if(!hiddenSeeds.includes(id)){ hiddenSeeds.push(id); changed=true; } });
+    if(persistMode==="memory") persistMode="runtime";
+    if(changed){ renderDecks(); (mode==="browse"?renderGrid():startStudy()); }
+  }catch(e){/* ignore */}
+}
+
+function saveCustom(){
+  const data = JSON.stringify(customCards);
+  if(persistMode==="local" || hasLocalStorage()){
+    try{ window.localStorage.setItem(CUSTOM_KEY, data); persistMode="local"; }catch(e){}
+  }
+  if(typeof window.storage !== "undefined" && window.storage){
+    try{ window.storage.set(CUSTOM_KEY, data); }catch(e){}
+  }
+}
+function saveHidden(){
+  const data = JSON.stringify(hiddenSeeds);
+  if(persistMode==="local" || hasLocalStorage()){
+    try{ window.localStorage.setItem(HIDDEN_KEY, data); persistMode="local"; }catch(e){}
+  }
+  if(typeof window.storage !== "undefined" && window.storage){
+    try{ window.storage.set(HIDDEN_KEY, data); }catch(e){}
+  }
+}
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let activeDeck = "all";
+let mode = "browse";
+let searchTerm = "";
+let studyList = [];
+let studyIndex = 0;
+let studyFlipped = false;
+
+function allCards(){
+  const seeds = SEED
+    .map((c,i)=>({id:"s"+i, deck:c[0], q:c[1], a:c[2], custom:false}))
+    .filter(c=>!hiddenSeeds.includes(c.id));
+  return seeds.concat(customCards.map(c=>({...c,custom:true})));
+}
+function visibleCards(){
+  let list = allCards();
+  if(activeDeck!=="all") list = list.filter(c=>c.deck===activeDeck);
+  if(searchTerm){
+    const t = searchTerm.toLowerCase();
+    list = list.filter(c=>(c.q+" "+c.a).toLowerCase().includes(t));
+  }
+  return list;
+}
+function fmt(s){
+  // escape then render `mono` spans and ** bold **
+  const esc = s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return esc.replace(/`([^`]+)`/g,'<span class="mono">$1</span>')
+            .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+}
+
+/* ================================================================
+   RENDER — decks + browse grid
+   ================================================================ */
+function renderDecks(){
+  const total = allCards().length;
+  const counts = {all: total};
+  DECKS.forEach(d=>counts[d.id]=allCards().filter(c=>c.deck===d.id).length);
+  const rail = document.getElementById("decks");
+  const mk = (id,label,n)=>`<button class="deck-btn ${activeDeck===id?'active':''}" onclick="pickDeck('${id}')">${label}<span class="n">${n}</span></button>`;
+  rail.innerHTML = mk("all","All decks",counts.all) +
+    DECKS.map(d=>mk(d.id,d.name,counts[d.id])).join("");
+  document.getElementById("counter").textContent = total + " cards";
+  const cc = customCards.length;
+  document.getElementById("customCount").textContent = cc? `// ${cc} of your own` : "";
+}
+
+function renderGrid(){
+  const grid = document.getElementById("grid");
+  const list = visibleCards();
+  if(!list.length){
+    grid.innerHTML = `<div class="empty">No cards match. Try another deck, clear the search, or add a card.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(c=>`
+    <div class="card ${c.custom?'custom':''}" data-id="${c.id}" onclick="flipCard(this,event)">
+      ${c.custom?`<button class="del" title="Delete card" onclick="deleteCard('${c.id}',event)">×</button>`:''}
+      <div class="card-inner">
+        <div class="face front">
+          <div class="card-eyebrow"><span>${DECK_NAME[c.deck]||c.deck}</span><span class="side">question</span></div>
+          <div class="card-q">${fmt(c.q)}</div>
+          <div class="hint">click to flip</div>
+        </div>
+        <div class="face back">
+          <div class="card-eyebrow"><span>answer</span><span class="side">${DECK_NAME[c.deck]||c.deck}</span></div>
+          <div class="card-a">${fmt(c.a)}</div>
+          <div class="hint">click to flip back</div>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function flipCard(el,e){
+  if(e && e.target.classList.contains("del")) return;
+  el.classList.toggle("flipped");
+}
+
+/* ================================================================
+   DECK / MODE / SEARCH
+   ================================================================ */
+function pickDeck(id){
+  activeDeck = id;
+  renderDecks();
+  if(mode==="browse") renderGrid(); else startStudy();
+}
+function setMode(m){
+  mode = m;
+  document.getElementById("mBrowse").classList.toggle("on",m==="browse");
+  document.getElementById("mStudy").classList.toggle("on",m==="study");
+  document.getElementById("browseView").style.display = m==="browse"?"block":"none";
+  document.getElementById("studyView").classList.toggle("on",m==="study");
+  if(m==="study") startStudy(); else renderGrid();
+}
+document.getElementById("search").addEventListener("input",e=>{
+  searchTerm = e.target.value;
+  if(mode==="browse") renderGrid();
+});
+
+/* ================================================================
+   STUDY MODE
+   ================================================================ */
+function startStudy(){
+  studyList = visibleCards();
+  studyIndex = 0; studyFlipped = false;
+  renderStudy();
+}
+function shuffleStudy(){
+  if(mode!=="study") setMode("study");
+  studyList = visibleCards();
+  for(let i=studyList.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [studyList[i],studyList[j]]=[studyList[j],studyList[i]];
+  }
+  studyIndex=0; studyFlipped=false;
+  renderStudy();
+  toast("Shuffled");
+}
+function renderStudy(){
+  const empty = document.getElementById("studyEmpty");
+  const cardEl = document.getElementById("studyCard");
+  if(!studyList.length){
+    empty.style.display="block"; cardEl.style.display="none";
+    document.getElementById("studyCount").textContent="0 / 0";
+    document.getElementById("pbar").style.width="0%";
+    document.getElementById("studyDeck").textContent="";
+    return;
+  }
+  empty.style.display="none"; cardEl.style.display="block";
+  const c = studyList[studyIndex];
+  cardEl.classList.toggle("flipped",studyFlipped);
+  document.getElementById("sQ").innerHTML = fmt(c.q);
+  document.getElementById("sA").innerHTML = fmt(c.a);
+  document.getElementById("sDeck").textContent = DECK_NAME[c.deck]||c.deck;
+  document.getElementById("sDeck2").textContent = DECK_NAME[c.deck]||c.deck;
+  document.getElementById("studyCount").textContent = `${studyIndex+1} / ${studyList.length}`;
+  document.getElementById("pbar").style.width = ((studyIndex+1)/studyList.length*100)+"%";
+  document.getElementById("studyDeck").textContent = activeDeck==="all"?"all decks":(DECK_NAME[activeDeck]||"");
+}
+function flipStudy(){ studyFlipped=!studyFlipped; renderStudy(); }
+function nextStudy(){
+  if(!studyList.length) return;
+  studyIndex=(studyIndex+1)%studyList.length; studyFlipped=false; renderStudy();
+}
+function prevStudy(){
+  if(!studyList.length) return;
+  studyIndex=(studyIndex-1+studyList.length)%studyList.length; studyFlipped=false; renderStudy();
+}
+document.addEventListener("keydown",e=>{
+  if(mode!=="study") return;
+  if(document.getElementById("addModal").classList.contains("on")) return;
+  if(e.key===" "){e.preventDefault();flipStudy();}
+  else if(e.key==="ArrowRight") nextStudy();
+  else if(e.key==="ArrowLeft") prevStudy();
+});
+
+/* ================================================================
+   ADD / DELETE CARDS
+   ================================================================ */
+function openAdd(){
+  const sel = document.getElementById("addDeck");
+  sel.innerHTML = DECKS.map(d=>`<option value="${d.id}">${d.name}</option>`).join("");
+  if(activeDeck!=="all") sel.value=activeDeck;
+  document.getElementById("addQ").value="";
+  document.getElementById("addA").value="";
+  document.getElementById("addModal").classList.add("on");
+  setTimeout(()=>document.getElementById("addQ").focus(),50);
+}
+function closeAdd(){ document.getElementById("addModal").classList.remove("on"); }
+async function saveCard(){
+  const deck = document.getElementById("addDeck").value;
+  const q = document.getElementById("addQ").value.trim();
+  const a = document.getElementById("addA").value.trim();
+  if(!q||!a){ toast("Both sides are required"); return; }
+  customCards.push({id:"c"+Date.now(), deck, q, a});
+  saveCustom();
+  closeAdd();
+  renderDecks();
+  if(mode==="browse") renderGrid(); else startStudy();
+  toast("Card added");
+}
+async function deleteCard(id,e){
+  if(e) e.stopPropagation();
+  if(id.startsWith("s")){
+    hiddenSeeds.push(id); saveHidden();
+  }else{
+    customCards = customCards.filter(c=>c.id!==id); saveCustom();
+  }
+  renderDecks();
+  if(mode==="browse") renderGrid(); else startStudy();
+  toast("Card removed");
+}
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove("show"),1800);
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+function init(){
+  loadCustomSync();     // synchronous — cards show immediately
+  renderDecks();
+  renderGrid();
+  adoptRuntimeStorage(); // async best-effort, merges Claude-runtime cards if present
+}
+init();
+</script>
+</body>
+</html>
